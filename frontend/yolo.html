@@ -1,123 +1,611 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AGAR·AI — YOLO Detection</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YOLOv8 — Validation Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --card: #162032;
+    --border: #1e3a5f;
+    --accent: #f97316;
+    --accent2: #fb923c;
+    --text: #e2eaf6;
+    --muted: #5a7a9a;
+    --good: #22d3a5;
+    --warn: #f59e0b;
+    --purple: #a78bfa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 40px;
+    background: rgba(10,14,26,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  nav .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+  nav .nav-links { display: flex; gap: 8px; }
+  nav .nav-links a {
+    text-decoration: none;
+    padding: 7px 18px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  nav .nav-links a:hover { color: var(--text); border-color: var(--border); }
+  nav .nav-links a.active {
+    color: var(--accent);
+    background: rgba(249,115,22,0.08);
+    border-color: rgba(249,115,22,0.3);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding: 60px 40px 40px;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse at center, rgba(249,115,22,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    background: rgba(249,115,22,0.08);
+    border: 1px solid rgba(249,115,22,0.25);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, #e2eaf6 30%, var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* ── METRIC PILLS ── */
+  .metrics-row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 36px 40px 0;
+  }
+  .metric-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 28px;
+    text-align: center;
+    min-width: 140px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .metric-pill:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .metric-pill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .metric-pill .val {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+  }
+  .metric-pill .label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+  .metric-pill .note {
+    font-size: 0.72rem;
+    color: var(--good);
+    margin-top: 4px;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    max-width: 1200px;
+    margin: 50px auto 0;
+    padding: 0 40px;
+  }
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── BATCH TABS ── */
+  .tab-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .tab-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    padding: 8px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .tab-btn:hover { color: var(--text); border-color: var(--accent); }
+  .tab-btn.active {
+    color: var(--accent);
+    background: rgba(249,115,22,0.1);
+    border-color: rgba(249,115,22,0.4);
+  }
+
+  /* ── BATCH PANEL ── */
+  .batch-panel { display: none; }
+  .batch-panel.active { display: block; }
+
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .img-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .img-card:hover { transform: translateY(-3px); border-color: rgba(249,115,22,0.4); }
+  .img-card .img-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .img-card .img-header h4 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .tag {
+    font-size: 0.68rem;
+    padding: 3px 10px;
+    border-radius: 5px;
+    font-family: 'Space Mono', monospace;
+  }
+  .tag-gt { background: rgba(167,139,250,0.1); color: var(--purple); border: 1px solid rgba(167,139,250,0.25); }
+  .tag-pred { background: rgba(249,115,22,0.1); color: var(--accent); border: 1px solid rgba(249,115,22,0.25); }
+  .img-card img {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+  }
+  .img-card .img-footer {
+    padding: 10px 20px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── INFO TABLE ── */
+  .info-table {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 50px;
+  }
+  .info-table table { width: 100%; border-collapse: collapse; }
+  .info-table th {
+    background: rgba(249,115,22,0.05);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 14px 22px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .info-table td {
+    padding: 14px 22px;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(30,58,95,0.5);
+    color: var(--text);
+  }
+  .info-table tr:last-child td { border-bottom: none; }
+  .info-table td:first-child { color: var(--muted); font-size: 0.85rem; }
+  .info-table td code {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--accent);
+    background: rgba(249,115,22,0.07);
+    padding: 2px 8px;
+    border-radius: 5px;
+  }
+
+  /* ── CLASS LEGEND ── */
+  .legend {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 50px;
+  }
+  .legend h3 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+  }
+  .legend-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    margin-top: 70px;
+    padding: 24px 40px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  @media (max-width: 700px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    nav { padding: 14px 20px; }
+    .section { padding: 0 20px; }
+    .metrics-row { margin: 24px 20px 0; }
+    .hero { padding: 40px 20px 30px; }
+  }
+</style>
 </head>
 <body>
-  <div class="bg-grid"></div>
-  <div class="bg-glow" style="--glow-hue:40deg"></div>
 
-  <nav class="nav">
-    <div class="nav-logo"><span class="logo-dot" style="background:var(--det-accent);box-shadow:0 0 10px var(--det-accent)"></span>AGAR<span class="logo-accent" style="color:var(--det-accent)">·AI</span></div>
-    <div class="nav-links">
-      <a href="index.html" class="nav-link">⬡ Hybrid</a>
-      <a href="yolo.html"  class="nav-link active">◈ Detection</a>
-      <a href="unet.html"  class="nav-link">◎ Segmentation</a>
-    </div>
-    <div class="nav-status" id="navStatus">
-      <span class="status-dot offline"></span>
-      <span class="status-text">Connecting...</span>
-    </div>
-  </nav>
+<!-- NAV -->
+<nav>
+  <span class="logo">🧫 Colony Analyzer</span>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="yolo.html" class="active">YOLOv8</a>
+    <a href="unet.html">UNet</a>
+  </div>
+</nav>
 
-  <div class="page-header">
-    <div class="page-mode-tag detection">Detection Mode</div>
-    <h2 class="page-title">YOLO Colony Detection</h2>
-    <p class="page-sub">Fast bounding-box detection. Returns colony ID, class, confidence score, pixel coordinates, bbox dimensions, center point, and class distribution.</p>
-    <div class="model-pills">
-      <div class="model-pill"><span class="pill-dot det"></span>YOLO12x @ imgsz=1024 · 59M params</div>
-      <div class="model-pill"><span class="pill-dot det"></span>YOLOv8l @ imgsz=1280 (comparison)</div>
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">MODEL EVALUATION — YOLOv8L</div>
+  <h1>YOLOv8L Validation<br>Results</h1>
+  <p>Ground truth vs predicted detection comparison across validation batches for bacterial colony classification.</p>
+</div>
+
+<!-- METRICS -->
+<div class="metrics-row">
+  <div class="metric-pill">
+    <span class="val">YOLOv8L</span>
+    <div class="label">Architecture</div>
+    <div class="note">Large variant</div>
+  </div>
+  <div class="metric-pill">
+    <span class="val">6</span>
+    <div class="label">Classes</div>
+    <div class="note">Bacterial species</div>
+  </div>
+  <div class="metric-pill">
+    <span class="val">3</span>
+    <div class="label">Val Batches</div>
+    <div class="note">Labels + Preds</div>
+  </div>
+  <div class="metric-pill">
+    <span class="val">best.pt</span>
+    <div class="label">Checkpoint</div>
+    <div class="note">Best epoch saved</div>
+  </div>
+</div>
+
+<!-- CLASS LEGEND -->
+<div class="section">
+  <div class="legend">
+    <h3>Class Color Reference</h3>
+    <div class="legend-grid">
+      <div class="legend-item"><div class="legend-dot" style="background:#1f77b4"></div>B. subtilis</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#17becf"></div>C. albicans</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2ca02c"></div>Contamination</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#0d1b6b"></div>E. coli</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e377c2"></div>P. aeruginosa</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff4d4d"></div>S. aureus</div>
+    </div>
+  </div>
+</div>
+
+<!-- VAL BATCH IMAGES -->
+<div class="section" style="margin-top:40px;">
+  <div class="section-title">Validation Batch Comparisons</div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="showBatch('b0', this)">Batch 0</button>
+    <button class="tab-btn" onclick="showBatch('b1', this)">Batch 1</button>
+    <button class="tab-btn" onclick="showBatch('b2', this)">Batch 2</button>
+  </div>
+
+  <!-- BATCH 0 -->
+  <div class="batch-panel active" id="panel-b0">
+    <div class="compare-grid">
+      <div class="img-card">
+        <div class="img-header">
+          <h4>Batch 0 — Ground Truth</h4>
+          <span class="tag tag-gt">LABELS</span>
+        </div>
+        <!-- Replace src with correct relative path, e.g. val/val_batch0_labels.jpg -->
+        <img src="val/val_batch0_labels.jpg" alt="Val Batch 0 Ground Truth Labels">
+        <div class="img-footer">val_batch0_labels.jpg</div>
+      </div>
+      <div class="img-card">
+        <div class="img-header">
+          <h4>Batch 0 — YOLOv8L Predictions</h4>
+          <span class="tag tag-pred">PREDICTED</span>
+        </div>
+        <img src="val/val_batch0_pred.jpg" alt="Val Batch 0 Predictions">
+        <div class="img-footer">val_batch0_pred.jpg</div>
+      </div>
     </div>
   </div>
 
-  <section class="upload-section">
-    <div class="upload-area" id="uploadArea">
-      <div class="upload-inner">
-        <div class="upload-icon" style="color:var(--det-accent)">
-          <svg viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4"/><path d="M32 40V22M32 22L24 30M32 22L40 30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <!-- BATCH 1 -->
+  <div class="batch-panel" id="panel-b1">
+    <div class="compare-grid">
+      <div class="img-card">
+        <div class="img-header">
+          <h4>Batch 1 — Ground Truth</h4>
+          <span class="tag tag-gt">LABELS</span>
         </div>
-        <div class="upload-text">Drop agar plate image here</div>
-        <div class="upload-sub">JPG · PNG · Optimal resolution: 3660×4000px</div>
-        <label class="upload-btn det-btn" for="fileInput">Choose File</label>
-        <input type="file" id="fileInput" accept="image/*" hidden />
+        <img src="val/val_batch1_labels.jpg" alt="Val Batch 1 Ground Truth Labels">
+        <div class="img-footer">val_batch1_labels.jpg</div>
       </div>
-    </div>
-    <div class="preview-strip hidden" id="previewStrip">
-      <img id="previewImg" alt="preview" />
-      <div class="preview-meta" id="previewMeta"></div>
-      <button class="clear-btn" id="clearBtn">✕</button>
-    </div>
-    <button class="analyze-btn det-analyze" id="analyzeBtn" disabled>
-      <span class="btn-spinner hidden" id="btnSpinner"></span>
-      <span id="btnText">Run YOLO Detection</span>
-      <span class="btn-arrow">→</span>
-    </button>
-    <div class="progress-wrap hidden" id="progressWrap">
-      <div class="progress-track"><div class="progress-fill det-fill" id="progressFill"></div></div>
-      <div class="progress-label" id="progressLabel">Sending to YOLO...</div>
-    </div>
-    <div class="error-box hidden" id="errorBox"></div>
-  </section>
-
-  <section class="results-section hidden" id="resultsSection">
-    <div class="results-label">— Detection Results —</div>
-    <div class="stats-row" id="statsRow"></div>
-    <div class="image-panels" id="imagePanels"></div>
-    <div class="two-col">
-      <div class="panel">
-        <div class="panel-header">Class Distribution</div>
-        <div class="panel-body" id="classChart"></div>
-      </div>
-      <div class="panel">
-        <div class="panel-header">Detection Metrics</div>
-        <div class="panel-body" id="plateMetrics"></div>
-      </div>
-    </div>
-    <!-- Full per-colony table -->
-    <div class="panel full-width">
-      <div class="panel-header">
-        <span>Per-Colony Detail — All Information</span>
-        <div class="table-controls">
-          <input type="text" id="tableSearch" class="table-search" placeholder="Filter class..." />
-          <select id="tableSort" class="table-sort">
-            <option value="id">Sort: ID</option>
-            <option value="conf_desc">Conf ↓</option>
-            <option value="conf_asc">Conf ↑</option>
-            <option value="area_desc">Bbox Area ↓</option>
-            <option value="class">Class A–Z</option>
-          </select>
-          <button class="export-btn" id="exportBtn">↓ Export CSV</button>
+      <div class="img-card">
+        <div class="img-header">
+          <h4>Batch 1 — YOLOv8L Predictions</h4>
+          <span class="tag tag-pred">PREDICTED</span>
         </div>
+        <img src="val/val_batch1_pred.jpg" alt="Val Batch 1 Predictions">
+        <div class="img-footer">val_batch1_pred.jpg</div>
       </div>
-      <div class="table-wrap">
-        <table class="colony-table">
-          <thead>
-            <tr>
-              <th>#</th><th>Class</th><th>Confidence</th>
-              <th>X1</th><th>Y1</th><th>X2</th><th>Y2</th>
-              <th>Width px</th><th>Height px</th>
-              <th>Center X</th><th>Center Y</th>
-              <th>Bbox Area px²</th>
-            </tr>
-          </thead>
-          <tbody id="colonyTableBody"></tbody>
-        </table>
-      </div>
-      <div class="table-footer" id="tableFooter"></div>
     </div>
-  </section>
+  </div>
 
-  <footer class="footer">
-    <span>AGAR·AI · YOLO Detection</span>
-    <span class="footer-mono">YOLO12x + YOLOv8l-1280</span>
-  </footer>
+  <!-- BATCH 2 -->
+  <div class="batch-panel" id="panel-b2">
+    <div class="compare-grid">
+      <div class="img-card">
+        <div class="img-header">
+          <h4>Batch 2 — Ground Truth</h4>
+          <span class="tag tag-gt">LABELS</span>
+        </div>
+        <img src="val/val_batch2_labels.jpg" alt="Val Batch 2 Ground Truth Labels">
+        <div class="img-footer">val_batch2_labels.jpg</div>
+      </div>
+      <div class="img-card">
+        <div class="img-header">
+          <h4>Batch 2 — YOLOv8L Predictions</h4>
+          <span class="tag tag-pred">PREDICTED</span>
+        </div>
+        <img src="val/val_batch2_pred.jpg" alt="Val Batch 2 Predictions">
+        <div class="img-footer">val_batch2_pred.jpg</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-  <script src="script.js"></script>
-  <script>document.addEventListener('DOMContentLoaded', () => { checkHealth(); initPage('yolo'); });</script>
+<!-- TRAINING & EVALUATION CURVES -->
+<div class="section">
+  <div class="section-title">Training & Evaluation Analytics</div>
+
+  <div class="compare-grid">
+
+    <!-- F1 CURVE -->
+    <div class="img-card">
+      <div class="img-header">
+        <h4>F1 Confidence Curve</h4>
+        <span class="tag tag-pred">F1</span>
+      </div>
+      <img src="val/BoxF1_curve.png" alt="F1 Curve">
+      <div class="img-footer">BoxF1_curve.png</div>
+    </div>
+
+    <!-- PRECISION CURVE -->
+    <div class="img-card">
+      <div class="img-header">
+        <h4>Precision Curve</h4>
+        <span class="tag tag-pred">PRECISION</span>
+      </div>
+      <img src="val/BoxP_curve.png" alt="Precision Curve">
+      <div class="img-footer">BoxP_curve.png</div>
+    </div>
+
+    <!-- RECALL CURVE -->
+    <div class="img-card">
+      <div class="img-header">
+        <h4>Recall Curve</h4>
+        <span class="tag tag-pred">RECALL</span>
+      </div>
+      <img src="val/BoxR_curve.png" alt="Recall Curve">
+      <div class="img-footer">BoxR_curve.png</div>
+    </div>
+
+    <!-- PR CURVE -->
+    <div class="img-card">
+      <div class="img-header">
+        <h4>Precision–Recall Curve</h4>
+        <span class="tag tag-pred">PR</span>
+      </div>
+      <img src="val/BoxPR_curve.png" alt="PR Curve">
+      <div class="img-footer">BoxPR_curve.png</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CONFUSION MATRICES -->
+<div class="section">
+  <div class="section-title">Confusion Matrix Analysis</div>
+
+  <div class="compare-grid">
+
+    <!-- STANDARD MATRIX -->
+    <div class="img-card">
+      <div class="img-header">
+        <h4>Confusion Matrix</h4>
+        <span class="tag tag-gt">RAW</span>
+      </div>
+      <img src="val/confusion_matrix.png" alt="Confusion Matrix">
+      <div class="img-footer">confusion_matrix.png</div>
+    </div>
+
+    <!-- NORMALIZED MATRIX -->
+    <div class="img-card">
+      <div class="img-header">
+        <h4>Normalized Confusion Matrix</h4>
+        <span class="tag tag-pred">NORMALIZED</span>
+      </div>
+      <img src="val/confusion_matrix_normalized.png" alt="Normalized Confusion Matrix">
+      <div class="img-footer">confusion_matrix_normalized.png</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODEL INFO TABLE -->
+<div class="section">
+  <div class="section-title">Model Details</div>
+  <div class="info-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Architecture</td><td><code>YOLOv8L</code> (Large)</td></tr>
+        <tr><td>Task</td><td>Object Detection + Classification</td></tr>
+        <tr><td>Classes</td><td>B.subtilis, C.albicans, Contamination, E.coli, P.aeruginosa, S.aureus</td></tr>
+        <tr><td>Weights File</td><td><code>backend/models/yolo/best.pt</code></td></tr>
+        <tr><td>Validation Batches</td><td>3 batches (batch 0, 1, 2)</td></tr>
+        <tr><td>Val Images Location</td><td><code>frontend/val/</code></td></tr>
+        <tr><td>Integration</td><td>YOLO-only mode and Hybrid mode (YOLO + UNet)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  Colony Analyzer · YOLOv8L Validation Dashboard · EDI2 Project
+</footer>
+
+<script>
+  function showBatch(id, btn) {
+    // hide all panels
+    document.querySelectorAll('.batch-panel').forEach(p => p.classList.remove('active'));
+    // deactivate all tabs
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    // show selected
+    document.getElementById('panel-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+</script>
+
 </body>
 </html>

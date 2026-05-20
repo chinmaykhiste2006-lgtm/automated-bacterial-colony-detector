@@ -1,151 +1,451 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AGAR·AI — UNet Segmentation</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNet — Colony Count Evaluation</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --card: #162032;
+    --border: #1e3a5f;
+    --accent: #00c6ff;
+    --accent2: #0072ff;
+    --text: #e2eaf6;
+    --muted: #5a7a9a;
+    --good: #22d3a5;
+    --warn: #f59e0b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 40px;
+    background: rgba(10,14,26,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  nav .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+  nav .nav-links { display: flex; gap: 8px; }
+  nav .nav-links a {
+    text-decoration: none;
+    padding: 7px 18px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  nav .nav-links a:hover { color: var(--text); border-color: var(--border); }
+  nav .nav-links a.active {
+    color: var(--accent);
+    background: rgba(0,198,255,0.08);
+    border-color: rgba(0,198,255,0.3);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding: 60px 40px 40px;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse at center, rgba(0,114,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    background: rgba(0,198,255,0.08);
+    border: 1px solid rgba(0,198,255,0.25);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, #e2eaf6 30%, var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* ── METRIC PILLS ── */
+  .metrics-row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 36px 40px 0;
+  }
+  .metric-pill {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 28px;
+    text-align: center;
+    min-width: 150px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .metric-pill:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .metric-pill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+  }
+  .metric-pill .val {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+  }
+  .metric-pill .label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+  .metric-pill .note {
+    font-size: 0.72rem;
+    color: var(--good);
+    margin-top: 4px;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    max-width: 1100px;
+    margin: 50px auto 0;
+    padding: 0 40px;
+  }
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── MAE CHART CARD ── */
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+  }
+  .chart-card .chart-header {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .chart-card .chart-header h2 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .chart-card .chart-header .tag {
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+  }
+  .tag-mae { background: rgba(0,198,255,0.1); color: var(--accent); border: 1px solid rgba(0,198,255,0.2); }
+  .tag-reg { background: rgba(245,158,11,0.1); color: var(--warn); border: 1px solid rgba(245,158,11,0.2); }
+
+  .chart-body {
+    padding: 28px;
+    display: flex;
+    justify-content: center;
+  }
+  .chart-body img {
+    width: 100%;
+    max-width: 860px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    display: block;
+  }
+
+  /* ── INSIGHTS GRID ── */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 50px;
+  }
+  .insight-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .insight-card:hover { transform: translateY(-3px); border-color: rgba(0,198,255,0.35); }
+  .insight-icon {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+  }
+  .insight-card h4 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+  .insight-card p {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .insight-card .status {
+    display: inline-block;
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 5px;
+    margin-top: 10px;
+    font-family: 'Space Mono', monospace;
+  }
+  .status-good { background: rgba(34,211,165,0.1); color: var(--good); border: 1px solid rgba(34,211,165,0.2); }
+  .status-warn { background: rgba(245,158,11,0.1); color: var(--warn); border: 1px solid rgba(245,158,11,0.2); }
+
+  /* ── MODEL INFO TABLE ── */
+  .info-table {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-top: 50px;
+  }
+  .info-table table { width: 100%; border-collapse: collapse; }
+  .info-table th {
+    background: rgba(0,198,255,0.05);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 14px 22px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .info-table td {
+    padding: 14px 22px;
+    font-size: 0.9rem;
+    border-bottom: 1px solid rgba(30,58,95,0.5);
+    color: var(--text);
+  }
+  .info-table tr:last-child td { border-bottom: none; }
+  .info-table td:first-child { color: var(--muted); font-size: 0.85rem; }
+  .info-table td code {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--accent);
+    background: rgba(0,198,255,0.07);
+    padding: 2px 8px;
+    border-radius: 5px;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    margin-top: 70px;
+    padding: 24px 40px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  @media (max-width: 640px) {
+    nav { padding: 14px 20px; }
+    .section { padding: 0 20px; }
+    .metrics-row { margin: 24px 20px 0; }
+    .hero { padding: 40px 20px 30px; }
+  }
+</style>
 </head>
 <body>
-  <div class="bg-grid"></div>
-  <div class="bg-glow" style="--glow-hue:160deg"></div>
 
-  <nav class="nav">
-    <div class="nav-logo"><span class="logo-dot" style="background:var(--seg-accent);box-shadow:0 0 10px var(--seg-accent)"></span>AGAR<span class="logo-accent" style="color:var(--seg-accent)">·AI</span></div>
-    <div class="nav-links">
-      <a href="index.html" class="nav-link">⬡ Hybrid</a>
-      <a href="yolo.html"  class="nav-link">◈ Detection</a>
-      <a href="unet.html"  class="nav-link active">◎ Segmentation</a>
-    </div>
-    <div class="nav-status" id="navStatus">
-      <span class="status-dot offline"></span>
-      <span class="status-text">Connecting...</span>
-    </div>
-  </nav>
+<!-- NAV -->
+<nav>
+  <span class="logo">🧫 Colony Analyzer</span>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="yolo.html">YOLOv8</a>
+    <a href="unet.html" class="active">UNet</a>
+  </div>
+</nav>
 
-  <div class="page-header">
-    <div class="page-mode-tag segmentation">Segmentation Mode</div>
-    <h2 class="page-title">UNet++ Segmentation</h2>
-    <p class="page-sub">YOLO detects colonies first, then UNet++ segments each one pixel-by-pixel. Full mask overlay, coverage percentage, area, radius, and per-colony breakdowns.</p>
-    <div class="model-pills">
-      <div class="model-pill"><span class="pill-dot seg"></span>UNet++ / ConvNeXt-Large · SCSE attention</div>
-      <div class="model-pill"><span class="pill-dot seg"></span>256×256 patches · Focal+Dice+Boundary loss</div>
+<!-- HERO -->
+<div class="hero">
+  <div class="badge">MODEL EVALUATION — UNET</div>
+  <h1>U-Net Colony<br>Count Accuracy</h1>
+  <p>Regression-based evaluation of the U-Net model for bacterial colony counting using Mean Absolute Error.</p>
+</div>
+
+<!-- METRIC PILLS -->
+<div class="metrics-row">
+  <div class="metric-pill">
+    <span class="val">20.6</span>
+    <div class="label">Mean Abs Error</div>
+    <div class="note">↓ lower is better</div>
+  </div>
+  <div class="metric-pill">
+    <span class="val">~0</span>
+    <div class="label">Median Error</div>
+    <div class="note">✓ peak at zero</div>
+  </div>
+  <div class="metric-pill">
+    <span class="val">0–50</span>
+    <div class="label">Best Count Range</div>
+    <div class="note">✓ near-perfect fit</div>
+  </div>
+  <div class="metric-pill">
+    <span class="val">+bias</span>
+    <div class="label">Error Skew</div>
+    <div class="note">⚠ slight over-count</div>
+  </div>
+</div>
+
+<!-- MAE CHART -->
+<div class="section">
+  <div class="section-title">Performance Chart</div>
+  <div class="chart-card">
+    <div class="chart-header">
+      <h2>Colony Count: True vs Predicted &amp; Error Distribution</h2>
+      <div style="display:flex;gap:8px;">
+        <span class="tag tag-mae">MAE = 20.6</span>
+        <span class="tag tag-reg">Regression Task</span>
+      </div>
+    </div>
+    <div class="chart-body">
+      <!-- 
+        Replace src with the actual path to count_accuracy.png 
+        e.g. src="../count_accuracy.png" or served via your Flask backend
+      -->
+      <img src="count_accuracy.png" alt="Colony Count Accuracy — True vs Predicted and Error Distribution">
     </div>
   </div>
+</div>
 
-  <section class="upload-section">
-    <div class="upload-area" id="uploadArea">
-      <div class="upload-inner">
-        <div class="upload-icon" style="color:var(--seg-accent)">
-          <svg viewBox="0 0 64 64" fill="none"><circle cx="32" cy="32" r="24" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/><circle cx="32" cy="32" r="12" stroke="currentColor" stroke-width="1.5"/><path d="M32 20v8M32 36v8M20 32h8M36 32h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </div>
-        <div class="upload-text">Drop agar plate image here</div>
-        <div class="upload-sub">JPG · PNG · Full resolution recommended</div>
-        <label class="upload-btn seg-btn" for="fileInput">Choose File</label>
-        <input type="file" id="fileInput" accept="image/*" hidden />
-      </div>
+<!-- INSIGHTS -->
+<div class="section">
+  <div class="section-title">Key Observations</div>
+  <div class="insights-grid">
+    <div class="insight-card">
+      <div class="insight-icon">🎯</div>
+      <h4>Low-Count Accuracy</h4>
+      <p>Predictions for 0–50 colonies sit tightly on the perfect-prediction line, indicating strong segmentation performance in typical lab samples.</p>
+      <span class="status status-good">✓ Excellent</span>
     </div>
-    <div class="preview-strip hidden" id="previewStrip">
-      <img id="previewImg" alt="preview" />
-      <div class="preview-meta" id="previewMeta"></div>
-      <button class="clear-btn" id="clearBtn">✕</button>
+    <div class="insight-card">
+      <div class="insight-icon">📊</div>
+      <h4>Error Distribution</h4>
+      <p>The histogram is sharply peaked at zero, meaning the majority of predictions have near-zero error — most images are counted correctly.</p>
+      <span class="status status-good">✓ Strong</span>
     </div>
-
-    <!-- Mask opacity control -->
-    <div class="slider-row hidden" id="sliderRow">
-      <span class="toggle-label">Mask opacity</span>
-      <input type="range" id="opacitySlider" min="0" max="100" value="45" class="opacity-slider" />
-      <span class="slider-val" id="sliderVal">45%</span>
+    <div class="insight-card">
+      <div class="insight-icon">📈</div>
+      <h4>High-Density Plates</h4>
+      <p>Slight overestimation at counts above 100. This is expected — dense colony overlap causes segmentation boundaries to merge or split.</p>
+      <span class="status status-warn">⚠ Moderate</span>
     </div>
-
-    <button class="analyze-btn seg-analyze" id="analyzeBtn" disabled>
-      <span class="btn-spinner hidden" id="btnSpinner"></span>
-      <span id="btnText">Run Segmentation</span>
-      <span class="btn-arrow">→</span>
-    </button>
-    <div class="progress-wrap hidden" id="progressWrap">
-      <div class="progress-track"><div class="progress-fill seg-fill" id="progressFill"></div></div>
-      <div class="progress-label" id="progressLabel">Running YOLO → UNet pipeline...</div>
+    <div class="insight-card">
+      <div class="insight-icon">⚖️</div>
+      <h4>Overall Trend</h4>
+      <p>Strong positive correlation between true and predicted counts across the full range, confirming the model has learned meaningful colony features.</p>
+      <span class="status status-good">✓ Good Fit</span>
     </div>
-    <div class="error-box hidden" id="errorBox"></div>
-  </section>
+  </div>
+</div>
 
-  <section class="results-section hidden" id="resultsSection">
-    <div class="results-label">— Segmentation Results —</div>
-    <div class="stats-row" id="statsRow"></div>
+<!-- MODEL INFO TABLE -->
+<div class="section">
+  <div class="section-title">Model Details</div>
+  <div class="info-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Architecture</td><td><code>U-Net</code></td></tr>
+        <tr><td>Task</td><td>Colony Segmentation → Count Regression</td></tr>
+        <tr><td>Evaluation Metric</td><td><code>MAE (Mean Absolute Error)</code></td></tr>
+        <tr><td>MAE Score</td><td><code>20.6</code></td></tr>
+        <tr><td>Weights File</td><td><code>backend/models/unet/best.pt</code></td></tr>
+        <tr><td>Best Performance Range</td><td>0 – 50 colonies per plate</td></tr>
+        <tr><td>Error Skew</td><td>Positive (slight over-counting at high density)</td></tr>
+        <tr><td>Integration</td><td>Hybrid mode (YOLO + UNet) in main analyzer</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
-    <!-- Mask viewer with view toggle -->
-    <div class="panel full-width mask-viewer-panel">
-      <div class="panel-header">
-        <span>Segmentation Output</span>
-        <div class="mask-toggle-btns" id="maskToggleBtns">
-          <button class="mask-view-btn active" onclick="showMaskView('overlay')">Overlay</button>
-          <button class="mask-view-btn" onclick="showMaskView('mask')">Mask Only</button>
-          <button class="mask-view-btn" onclick="showMaskView('original')">Original</button>
-        </div>
-      </div>
-      <div class="mask-canvas-wrap"><canvas id="maskCanvas"></canvas></div>
-    </div>
+<footer>
+  Colony Analyzer · U-Net Evaluation Dashboard · EDI2 Project
+</footer>
 
-    <!-- Class + plate metrics -->
-    <div class="two-col">
-      <div class="panel">
-        <div class="panel-header">Class Distribution</div>
-        <div class="panel-body" id="classChart"></div>
-      </div>
-      <div class="panel">
-        <div class="panel-header">Plate Metrics</div>
-        <div class="panel-body" id="plateMetrics"></div>
-      </div>
-    </div>
-
-    <!-- Image panels -->
-    <div class="image-panels" id="imagePanels"></div>
-
-    <!-- Full per-colony table with segmentation metrics -->
-    <div class="panel full-width">
-      <div class="panel-header">
-        <span>Per-Colony Detail — All Information</span>
-        <div class="table-controls">
-          <input type="text" id="tableSearch" class="table-search" placeholder="Filter class..." />
-          <select id="tableSort" class="table-sort">
-            <option value="id">Sort: ID</option>
-            <option value="conf_desc">Conf ↓</option>
-            <option value="conf_asc">Conf ↑</option>
-            <option value="area_desc">Area ↓</option>
-            <option value="cov_desc">Coverage ↓</option>
-            <option value="class">Class A–Z</option>
-          </select>
-          <button class="export-btn" id="exportBtn">↓ Export CSV</button>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table class="colony-table">
-          <thead>
-            <tr>
-              <th>#</th><th>Class</th><th>Confidence</th>
-              <th>X1</th><th>Y1</th><th>X2</th><th>Y2</th>
-              <th>Width px</th><th>Height px</th>
-              <th>Center X</th><th>Center Y</th>
-              <th>Colony px</th><th>Area px²</th>
-              <th>Est. Radius</th><th>Coverage %</th>
-            </tr>
-          </thead>
-          <tbody id="colonyTableBody"></tbody>
-        </table>
-      </div>
-      <div class="table-footer" id="tableFooter"></div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <span>AGAR·AI · UNet++ Segmentation</span>
-    <span class="footer-mono">ConvNeXt-Large + SCSE · 256×256 patches</span>
-  </footer>
-
-  <script src="script.js"></script>
-  <script>document.addEventListener('DOMContentLoaded', () => { checkHealth(); initPage('hybrid'); });</script>
 </body>
 </html>
