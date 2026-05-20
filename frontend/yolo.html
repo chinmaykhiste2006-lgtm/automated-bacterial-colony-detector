@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGAR·AI — YOLO Detection</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow" style="--glow-hue:40deg"></div>
+
+  <nav class="nav">
+    <div class="nav-logo"><span class="logo-dot" style="background:var(--det-accent);box-shadow:0 0 10px var(--det-accent)"></span>AGAR<span class="logo-accent" style="color:var(--det-accent)">·AI</span></div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">⬡ Hybrid</a>
+      <a href="yolo.html"  class="nav-link active">◈ Detection</a>
+      <a href="unet.html"  class="nav-link">◎ Segmentation</a>
+    </div>
+    <div class="nav-status" id="navStatus">
+      <span class="status-dot offline"></span>
+      <span class="status-text">Connecting...</span>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="page-mode-tag detection">Detection Mode</div>
+    <h2 class="page-title">YOLO Colony Detection</h2>
+    <p class="page-sub">Fast bounding-box detection. Returns colony ID, class, confidence score, pixel coordinates, bbox dimensions, center point, and class distribution.</p>
+    <div class="model-pills">
+      <div class="model-pill"><span class="pill-dot det"></span>YOLO12x @ imgsz=1024 · 59M params</div>
+      <div class="model-pill"><span class="pill-dot det"></span>YOLOv8l @ imgsz=1280 (comparison)</div>
+    </div>
+  </div>
+
+  <section class="upload-section">
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-inner">
+        <div class="upload-icon" style="color:var(--det-accent)">
+          <svg viewBox="0 0 64 64" fill="none"><rect x="8" y="8" width="48" height="48" rx="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4"/><path d="M32 40V22M32 22L24 30M32 22L40 30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="upload-text">Drop agar plate image here</div>
+        <div class="upload-sub">JPG · PNG · Optimal resolution: 3660×4000px</div>
+        <label class="upload-btn det-btn" for="fileInput">Choose File</label>
+        <input type="file" id="fileInput" accept="image/*" hidden />
+      </div>
+    </div>
+    <div class="preview-strip hidden" id="previewStrip">
+      <img id="previewImg" alt="preview" />
+      <div class="preview-meta" id="previewMeta"></div>
+      <button class="clear-btn" id="clearBtn">✕</button>
+    </div>
+    <button class="analyze-btn det-analyze" id="analyzeBtn" disabled>
+      <span class="btn-spinner hidden" id="btnSpinner"></span>
+      <span id="btnText">Run YOLO Detection</span>
+      <span class="btn-arrow">→</span>
+    </button>
+    <div class="progress-wrap hidden" id="progressWrap">
+      <div class="progress-track"><div class="progress-fill det-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">Sending to YOLO...</div>
+    </div>
+    <div class="error-box hidden" id="errorBox"></div>
+  </section>
+
+  <section class="results-section hidden" id="resultsSection">
+    <div class="results-label">— Detection Results —</div>
+    <div class="stats-row" id="statsRow"></div>
+    <div class="image-panels" id="imagePanels"></div>
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-header">Class Distribution</div>
+        <div class="panel-body" id="classChart"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">Detection Metrics</div>
+        <div class="panel-body" id="plateMetrics"></div>
+      </div>
+    </div>
+    <!-- Full per-colony table -->
+    <div class="panel full-width">
+      <div class="panel-header">
+        <span>Per-Colony Detail — All Information</span>
+        <div class="table-controls">
+          <input type="text" id="tableSearch" class="table-search" placeholder="Filter class..." />
+          <select id="tableSort" class="table-sort">
+            <option value="id">Sort: ID</option>
+            <option value="conf_desc">Conf ↓</option>
+            <option value="conf_asc">Conf ↑</option>
+            <option value="area_desc">Bbox Area ↓</option>
+            <option value="class">Class A–Z</option>
+          </select>
+          <button class="export-btn" id="exportBtn">↓ Export CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="colony-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Class</th><th>Confidence</th>
+              <th>X1</th><th>Y1</th><th>X2</th><th>Y2</th>
+              <th>Width px</th><th>Height px</th>
+              <th>Center X</th><th>Center Y</th>
+              <th>Bbox Area px²</th>
+            </tr>
+          </thead>
+          <tbody id="colonyTableBody"></tbody>
+        </table>
+      </div>
+      <div class="table-footer" id="tableFooter"></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>AGAR·AI · YOLO Detection</span>
+    <span class="footer-mono">YOLO12x + YOLOv8l-1280</span>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => { checkHealth(); initPage('yolo'); });</script>
+</body>
+</html>

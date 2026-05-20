@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Agar Colony Analyzer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <h1>🧫 Agar Colony Analyzer</h1>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <input type="file" id="file">
+
+        <select id="mode">
+            <option value="yolo">YOLO Detection</option>
+            <option value="hybrid">Hybrid (YOLO + UNet)</option>
+        </select>
+
+        <button onclick="analyze()">Run Analysis</button>
+    </div>
+
+    <!-- Class Color Reference -->
+    <div class="reference-card">
+        <h3>Class Color Reference</h3>
+        <div id="color-ref"></div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="result-grid">
+
+        <!-- Image -->
+        <div class="card">
+            <h3>Detection Output</h3>
+            <img id="res-img">
+        </div>
+
+        <!-- Table -->
+        <div class="card">
+            <h3>Detection Info (<span id="count" class="stat-box">0</span>)</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Class</th>
+                        <th>Conf</th>
+                        <th>BBox</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
