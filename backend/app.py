@@ -43,30 +43,31 @@ yolo_model = YOLO("models/yolo/best.pt")
 print("✅ YOLO Classes:", yolo_model.model.names)
 
 # ===============================
-# 🔄 LOAD UNET++ (EfficientNet-b4)
+# 🔄 LOAD UNET++ (EfficientNet-b4 + SCSE attention)
 # Notebook saves state_dict only:
 #   torch.save(unet.state_dict(), "best.pt")
-# So we must rebuild the architecture first.
+# So we must rebuild the exact same architecture first.
 # ===============================
 print("🔄 Loading UNet++ model...")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 unet_model = None
 
 try:
-    # Exact same architecture defined in the notebook (Cell 6)
+    # Must match notebook Cell 5 exactly — including decoder_attention_type='scse'
     unet_model = smp.UnetPlusPlus(
-        encoder_name    = "efficientnet-b4",
-        encoder_weights = None,   # no pretrained — loading our own weights
-        in_channels     = 3,
-        classes         = 1,
-        activation      = None    # raw logits → sigmoid applied at inference
+        encoder_name           = "efficientnet-b4",
+        encoder_weights        = None,
+        in_channels            = 3,
+        classes                = 1,
+        activation             = None,
+        decoder_attention_type = "scse"
     )
 
     state_dict = torch.load("models/unet/best.pt", map_location=device)
     unet_model.load_state_dict(state_dict)
     unet_model = unet_model.to(device)
     unet_model.eval()
-    print(f"✅ UNet++ (EfficientNet-b4) loaded on: {device}")
+    print(f"✅ UNet++ (EfficientNet-b4 + SCSE) loaded on: {device}")
 
 except Exception as e:
     unet_model = None
@@ -107,8 +108,8 @@ def run_unet_on_crop(crop, threshold=0.5):
     input_tensor = transformed["image"].unsqueeze(0).float().to(device)  # (1,3,128,128)
 
     with torch.no_grad():
-        output = unet_model(input_tensor)                           # (1,1,128,128) logits
-        mask   = torch.sigmoid(output).squeeze().cpu().numpy()      # (128,128) in [0,1]
+        output = unet_model(input_tensor)                        # (1,1,128,128) logits
+        mask   = torch.sigmoid(output).squeeze().cpu().numpy()   # (128,128) in [0,1]
 
     binary_mask = (mask > threshold).astype(np.uint8) * 255
 
@@ -122,7 +123,7 @@ def run_unet_on_crop(crop, threshold=0.5):
 def refine_with_unet(img, detections):
     """
     For each YOLO detection:
-      1. Crop the region (with small padding like notebook uses PAD_FRAC=0.1)
+      1. Crop the region (with small padding — PAD_FRAC=0.1)
       2. Run UNet++ on the crop
       3. Find the largest contour → fit minimum enclosing circle
       4. Replace bbox with the precise circle coordinates
@@ -131,8 +132,8 @@ def refine_with_unet(img, detections):
         print("⚠️  UNet not available — returning YOLO detections unchanged")
         return detections
 
-    H, W = img.shape[:2]
-    PAD_FRAC = 0.1   # matches notebook Cell 4
+    H, W    = img.shape[:2]
+    PAD_FRAC = 0.1
     refined  = []
 
     for d in detections:
@@ -141,7 +142,7 @@ def refine_with_unet(img, detections):
         if x2 <= x1 or y2 <= y1:
             continue
 
-        # Pad the crop slightly (same as notebook)
+        # Pad crop slightly
         pad_x = int((x2 - x1) * PAD_FRAC)
         pad_y = int((y2 - y1) * PAD_FRAC)
         x1p = max(0, x1 - pad_x)
