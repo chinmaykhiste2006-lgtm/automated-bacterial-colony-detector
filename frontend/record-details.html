@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Record Details</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+    --bg:#0a0e1a;
+    --surface:#111827;
+    --card:#162032;
+    --border:#1e3a5f;
+    --accent:#f97316;
+    --text:#e2eaf6;
+    --muted:#6b7f99;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'DM Sans',sans-serif;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+    padding:40px 20px;
+}
+
+.card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:24px;
+    margin-bottom:24px;
+}
+
+h1,h2{
+    font-family:'Space Mono',monospace;
+}
+
+h1{
+    color:var(--accent);
+    margin-bottom:20px;
+}
+
+img{
+    width:100%;
+    border-radius:14px;
+    border:1px solid var(--border);
+}
+
+.meta{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:16px;
+    margin-top:20px;
+}
+
+.meta-box{
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px;
+}
+
+.meta-label{
+    color:var(--muted);
+    font-size:0.82rem;
+    margin-bottom:8px;
+}
+
+.meta-value{
+    font-size:1rem;
+    font-weight:700;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+}
+
+th{
+    background:rgba(249,115,22,0.08);
+    color:var(--muted);
+    padding:12px;
+    text-align:left;
+}
+
+td{
+    padding:12px;
+    border-bottom:1px solid rgba(255,255,255,0.05);
+}
+
+.back-btn{
+    display:inline-block;
+    margin-bottom:24px;
+    text-decoration:none;
+    color:white;
+    background:linear-gradient(135deg,#f97316,#fb923c);
+    padding:12px 18px;
+    border-radius:10px;
+    font-weight:700;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<a href="records.html" class="back-btn">
+← Back to Records
+</a>
+
+<div class="card">
+
+<h1>Analysis Details</h1>
+
+<img id="record-img">
+
+<div class="meta">
+
+<div class="meta-box">
+<div class="meta-label">Mode</div>
+<div class="meta-value" id="mode"></div>
+</div>
+
+<div class="meta-box">
+<div class="meta-label">Total Colonies</div>
+<div class="meta-value" id="count"></div>
+</div>
+
+<div class="meta-box">
+<div class="meta-label">Timestamp</div>
+<div class="meta-value" id="time"></div>
+</div>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>Detection Details</h2>
+
+<table>
+
+<thead>
+<tr>
+<th>ID</th>
+<th>Class</th>
+<th>Confidence</th>
+<th>Bounding Box</th>
+</tr>
+</thead>
+
+<tbody id="tbody"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+async function loadRecord(){
+
+    const params = new URLSearchParams(
+        window.location.search
+    );
+
+    const id = params.get("id");
+
+    const res = await fetch(
+        `http://localhost:8000/records/${id}`
+    );
+
+    const data = await res.json();
+
+    document.getElementById("record-img").src =
+        `data:image/jpeg;base64,${data.image_base64}`;
+
+    document.getElementById("mode").innerText =
+        data.mode.toUpperCase();
+
+    document.getElementById("count").innerText =
+        data.total_colonies;
+
+    document.getElementById("time").innerText =
+        new Date(data.timestamp)
+        .toLocaleString();
+
+    document.getElementById("tbody").innerHTML =
+        data.detections.map(d => `
+
+            <tr>
+                <td>${d.id}</td>
+                <td>${d.class}</td>
+                <td>${d.confidence.toFixed(3)}</td>
+                <td>${d.bbox.join(", ")}</td>
+            </tr>
+
+        `).join("");
+}
+
+loadRecord();
+
+</script>
+
+</body>
+</html>
